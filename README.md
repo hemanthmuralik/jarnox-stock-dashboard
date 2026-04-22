@@ -155,4 +155,4 @@ stock-dashboard/
 
 ## One Thing I'd Add With More Time
 
-A simple **linear regression price projection** using the last 30 days of closing prices — shown as a dashed continuation line on the chart. It's not a reliable prediction, but it communicates trend direction clearly and is a natural extension of the MA indicators already computed.
+A simple **linear regression price projection** using the last 30 days of closing prices  shown as a dashed continuation line on the chart. It's not a reliable prediction, but it communicates trend direction clearly and is a natural extension of the MA indicators already computed.
