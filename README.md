@@ -7,7 +7,9 @@ Fetches real NSE stock data, computes key metrics, and serves a live dashboard.
 
 ## Live Demo
 
-> Deploy to Render and paste your URL here.
+> ## Live Demo
+
+> **https://jarnox-stock-dashboard-0uhq.onrender.com**
 
 ---
 
