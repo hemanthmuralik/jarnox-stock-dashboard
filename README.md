@@ -29,7 +29,7 @@ Fetches real NSE stock data, computes key metrics, and serves a live dashboard.
 
 ```bash
 # 1. Clone and enter the project
-git clone https://github.com/YOUR_USERNAME/stock-dashboard.git
+git clone https://github.com/hemanthmuralik/stock-dashboard.git
 cd stock-dashboard
 
 # 2. Create virtual environment
