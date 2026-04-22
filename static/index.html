@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stock Intelligence Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #232634;
+      --border: #2e3148;
+      --accent: #6c63ff;
+      --accent2: #00d4aa;
+      --red: #ff4d6d;
+      --green: #00d4aa;
+      --text: #e2e8f0;
+      --muted: #8892a4;
+      --font: 'Segoe UI', system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { font-size: 1.1rem; font-weight: 700; color: var(--accent); letter-spacing: -.3px; }
+    .logo span { color: var(--accent2); }
+    .header-right { display: flex; gap: 12px; align-items: center; }
+    #gl-badge {
+      font-size: .75rem; padding: 3px 10px; border-radius: 20px;
+      background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+    }
+
+    /* ── Layout ── */
+    .layout { display: flex; height: calc(100vh - 56px); overflow: hidden; }
+
+    /* ── Sidebar ── */
+    aside {
+      width: 240px; min-width: 240px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex; flex-direction: column;
+    }
+    .sidebar-head {
+      padding: 16px; font-size: .7rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .company-item {
+      padding: 12px 16px; cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .company-item:hover { background: var(--surface2); }
+    .company-item.active { background: var(--surface2); border-left: 3px solid var(--accent); }
+    .co-name { font-size: .85rem; font-weight: 600; }
+    .co-sym  { font-size: .7rem; color: var(--muted); margin-top: 2px; }
+    .co-chg  { font-size: .8rem; font-weight: 700; }
+    .up { color: var(--green); } .dn { color: var(--red); }
+
+    /* ── Main content ── */
+    main { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+
+    /* ── Cards ── */
+    .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px;
+    }
+    .card-label { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .card-value { font-size: 1.4rem; font-weight: 700; margin-top: 6px; }
+    .card-sub   { font-size: .75rem; color: var(--muted); margin-top: 4px; }
+
+    /* ── Chart panels ── */
+    .chart-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px;
+    }
+    .panel-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px;
+    }
+    .panel-title { font-size: .9rem; font-weight: 600; }
+    .btn-group { display: flex; gap: 6px; }
+    .btn {
+      padding: 4px 12px; border-radius: 6px; font-size: .75rem; cursor: pointer;
+      border: 1px solid var(--border); background: transparent; color: var(--muted);
+      transition: all .15s;
+    }
+    .btn:hover, .btn.active {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* ── Compare section ── */
+    .compare-bar {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px;
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    }
+    .compare-bar label { font-size: .8rem; color: var(--muted); }
+    .compare-bar select {
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 6px; padding: 6px 10px; font-size: .82rem;
+    }
+    .btn-compare {
+      padding: 7px 18px; border-radius: 6px; background: var(--accent);
+      color: #fff; border: none; cursor: pointer; font-size: .82rem; font-weight: 600;
+    }
+    .corr-badge {
+      margin-left: auto; padding: 5px 12px; border-radius: 20px;
+      background: var(--surface2); border: 1px solid var(--border);
+      font-size: .78rem; color: var(--text);
+    }
+
+    /* ── Bottom grid ── */
+    .bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    /* ── Gainers/Losers ── */
+    .gl-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    .gl-table th {
+      text-align: left; padding: 8px; font-size: .7rem;
+      text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border);
+    }
+    .gl-table td { padding: 9px 8px; border-bottom: 1px solid var(--border); }
+
+    /* ── Volatility bar ── */
+    .vol-bar-wrap { margin-bottom: 10px; }
+    .vol-label { display: flex; justify-content: space-between; font-size: .78rem; margin-bottom: 4px; }
+    .vol-bar-bg { background: var(--surface2); border-radius: 4px; height: 6px; }
+    .vol-bar-fill { height: 6px; border-radius: 4px; transition: width .4s; }
+
+    /* ── Loader ── */
+    .loader {
+      display: flex; align-items: center; justify-content: center;
+      height: 200px; color: var(--muted); font-size: .85rem;
+    }
+    .spinner {
+      width: 20px; height: 20px; border: 2px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .7s linear infinite; margin-right: 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Momentum pill ── */
+    .pill {
+      display: inline-block; padding: 2px 10px; border-radius: 20px;
+      font-size: .72rem; font-weight: 700;
+    }
+    .pill-bull { background: rgba(0,212,170,.15); color: var(--green); }
+    .pill-bear { background: rgba(255,77,109,.15); color: var(--red); }
+    .pill-neu  { background: rgba(140,146,164,.15); color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Stock<span>IQ</span> Dashboard</div>
+  <div class="header-right">
+    <div id="gl-badge">Loading market data…</div>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside>
+    <div class="sidebar-head">Tracked Stocks</div>
+    <div id="company-list"><div class="loader"><div class="spinner"></div>Loading…</div></div>
+  </aside>
+
+  <!-- Main -->
+  <main>
+    <!-- Metric cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">Current Price</div>
+        <div class="card-value" id="c-price">—</div>
+        <div class="card-sub" id="c-change">Select a stock</div>
+      </div>
+      <div class="card">
+        <div class="card-label">52-Week High / Low</div>
+        <div class="card-value" id="c-hl">—</div>
+        <div class="card-sub" id="c-avg">Avg close: —</div>
+      </div>
+      <div class="card">
+        <div class="card-label">YTD Return</div>
+        <div class="card-value" id="c-ytd">—</div>
+        <div class="card-sub" id="c-sector">—</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Momentum Signal</div>
+        <div class="card-value" id="c-momentum">—</div>
+        <div class="card-sub" id="c-vol">Volatility: —</div>
+      </div>
+    </div>
+
+    <!-- Price chart -->
+    <div class="chart-panel">
+      <div class="panel-header">
+        <div class="panel-title" id="price-chart-title">Closing Price</div>
+        <div class="btn-group">
+          <button class="btn active" onclick="loadChart(30, this)">30D</button>
+          <button class="btn" onclick="loadChart(90, this)">90D</button>
+          <button class="btn" onclick="loadChart(180, this)">180D</button>
+          <button class="btn" onclick="loadChart(365, this)">1Y</button>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="priceChart"></canvas></div>
+    </div>
+
+    <!-- Compare + bottom grid -->
+    <div class="compare-bar">
+      <label>Compare:</label>
+      <select id="cmp1"></select>
+      <span style="color:var(--muted)">vs</span>
+      <select id="cmp2"></select>
+      <select id="cmpDays">
+        <option value="30">30 days</option>
+        <option value="90" selected>90 days</option>
+        <option value="180">180 days</option>
+      </select>
+      <button class="btn-compare" onclick="runCompare()">Compare</button>
+      <div class="corr-badge" id="corr-badge" style="display:none"></div>
+    </div>
+
+    <div class="chart-panel" id="compare-panel" style="display:none">
+      <div class="panel-header">
+        <div class="panel-title" id="compare-title">Performance Comparison (Normalised to 100)</div>
+      </div>
+      <div class="chart-wrap"><canvas id="compareChart"></canvas></div>
+    </div>
+
+    <div class="bottom-grid">
+      <!-- Gainers / Losers -->
+      <div class="chart-panel">
+        <div class="panel-header"><div class="panel-title">Top Gainers &amp; Losers</div></div>
+        <div id="gl-content"><div class="loader"><div class="spinner"></div>Loading…</div></div>
+      </div>
+
+      <!-- Volatility -->
+      <div class="chart-panel">
+        <div class="panel-header"><div class="panel-title">30-Day Volatility Scores</div></div>
+        <div id="vol-content"><div class="loader"><div class="spinner"></div>Loading…</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const BASE = '';   // same origin
+let priceChartObj = null;
+let compareChartObj = null;
+let currentSymbol = null;
+let currentDays = 30;
+let allCompanies = [];
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+async function init() {
+  await Promise.all([loadSidebar(), loadGainersLosers()]);
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+async function loadSidebar() {
+  try {
+    const res = await fetch(`${BASE}/companies`);
+    const json = await res.json();
+    allCompanies = json.companies;
+
+    const list = document.getElementById('company-list');
+    list.innerHTML = '';
+
+    const cmp1 = document.getElementById('cmp1');
+    const cmp2 = document.getElementById('cmp2');
+    cmp1.innerHTML = ''; cmp2.innerHTML = '';
+
+    allCompanies.forEach((c, i) => {
+      // Sidebar row
+      const div = document.createElement('div');
+      div.className = 'company-item';
+      div.id = `co-${c.symbol}`;
+      const chg = c.change_pct ?? 0;
+      div.innerHTML = `
+        <div>
+          <div class="co-name">${c.name.split(' ').slice(0,2).join(' ')}</div>
+          <div class="co-sym">${c.symbol} · ${c.sector}</div>
+        </div>
+        <div class="co-chg ${chg >= 0 ? 'up' : 'dn'}">${chg >= 0 ? '+' : ''}${chg}%</div>`;
+      div.onclick = () => selectStock(c.symbol);
+      list.appendChild(div);
+
+      // Compare dropdowns
+      const o1 = new Option(c.symbol, c.symbol); cmp1.add(o1);
+      const o2 = new Option(c.symbol, c.symbol); cmp2.add(o2);
+    });
+
+    // Default compare selects
+    if (allCompanies.length >= 2) {
+      cmp1.value = allCompanies[0].symbol;
+      cmp2.value = allCompanies[1].symbol;
+    }
+
+    // Auto-select first stock
+    if (allCompanies.length > 0) selectStock(allCompanies[0].symbol);
+  } catch (e) {
+    document.getElementById('company-list').innerHTML =
+      `<div class="loader" style="color:var(--red)">Failed to load</div>`;
+  }
+}
+
+// ── Select stock ──────────────────────────────────────────────────────────────
+async function selectStock(symbol) {
+  // Highlight sidebar
+  document.querySelectorAll('.company-item').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById(`co-${symbol}`);
+  if (el) el.classList.add('active');
+
+  currentSymbol = symbol;
+  await Promise.all([loadSummary(symbol), loadChart(currentDays, null)]);
+}
+
+// ── Summary cards ─────────────────────────────────────────────────────────────
+async function loadSummary(symbol) {
+  try {
+    const res = await fetch(`${BASE}/summary/${symbol}`);
+    const d = await res.json();
+
+    document.getElementById('c-price').textContent = `₹${d.latest_close.toLocaleString('en-IN')}`;
+    const ret = d.ytd_return;
+    document.getElementById('c-change').innerHTML =
+      `<span class="${ret >= 0 ? 'up' : 'dn'}">${ret >= 0 ? '+' : ''}${ret}% YTD</span>`;
+    document.getElementById('c-hl').textContent =
+      `₹${d.high_52w.toLocaleString('en-IN')} / ₹${d.low_52w.toLocaleString('en-IN')}`;
+    document.getElementById('c-avg').textContent = `Avg close: ₹${d.avg_close.toLocaleString('en-IN')}`;
+
+    const ytd = d.ytd_return;
+    document.getElementById('c-ytd').innerHTML =
+      `<span class="${ytd >= 0 ? 'up' : 'dn'}">${ytd >= 0 ? '+' : ''}${ytd}%</span>`;
+    document.getElementById('c-sector').textContent = `${d.sector} · ${d.exchange ?? 'NSE'}`;
+
+    const mLabel = d.momentum_signal;
+    const pillClass = mLabel === 'Bullish' ? 'pill-bull' : mLabel === 'Bearish' ? 'pill-bear' : 'pill-neu';
+    document.getElementById('c-momentum').innerHTML =
+      `<span class="pill ${pillClass}">${mLabel}</span>`;
+    document.getElementById('c-vol').textContent =
+      `Volatility: ${d.volatility_level} (${d.avg_volatility_30d})`;
+  } catch (e) { console.error('summary error', e); }
+}
+
+// ── Price chart ───────────────────────────────────────────────────────────────
+async function loadChart(days, btn) {
+  if (!currentSymbol) return;
+  currentDays = days;
+
+  if (btn) {
+    document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  try {
+    const res = await fetch(`${BASE}/data/${currentSymbol}?days=${days}`);
+    const json = await res.json();
+    const records = json.records;
+
+    const labels  = records.map(r => r.date);
+    const closes  = records.map(r => r.close);
+    const ma7     = records.map(r => r.ma7);
+    const ma20    = records.map(r => r.ma20);
+
+    document.getElementById('price-chart-title').textContent =
+      `${json.name} (${currentSymbol}) — Closing Price`;
+
+    const ctx = document.getElementById('priceChart').getContext('2d');
+    if (priceChartObj) priceChartObj.destroy();
+
+    priceChartObj = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Close',
+            data: closes,
+            borderColor: '#6c63ff',
+            backgroundColor: 'rgba(108,99,255,.08)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0,
+            borderWidth: 2,
+          },
+          {
+            label: 'MA7',
+            data: ma7,
+            borderColor: '#00d4aa',
+            borderDash: [4,3],
+            pointRadius: 0,
+            borderWidth: 1.5,
+            fill: false,
+          },
+          {
+            label: 'MA20',
+            data: ma20,
+            borderColor: '#ff4d6d',
+            borderDash: [6,4],
+            pointRadius: 0,
+            borderWidth: 1.5,
+            fill: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { labels: { color: '#8892a4', font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ₹${ctx.parsed.y.toLocaleString('en-IN', {minimumFractionDigits: 2})}`,
+            },
+          },
+        },
+        scales: {
+          x: { ticks: { color: '#8892a4', maxTicksLimit: 8, font: { size: 10 } }, grid: { color: '#2e3148' } },
+          y: { ticks: { color: '#8892a4', font: { size: 10 }, callback: v => '₹' + v.toLocaleString('en-IN') }, grid: { color: '#2e3148' } },
+        },
+      },
+    });
+  } catch (e) { console.error('chart error', e); }
+}
+
+// ── Gainers / Losers ──────────────────────────────────────────────────────────
+async function loadGainersLosers() {
+  try {
+    const res = await fetch(`${BASE}/gainers-losers`);
+    const d = await res.json();
+
+    const allGL = [
+      ...d.top_gainers.map(x => ({...x, type:'gainer'})),
+      ...d.top_losers.map(x => ({...x, type:'loser'})),
+    ];
+
+    document.getElementById('gl-badge').textContent =
+      `▲ ${d.top_gainers[0]?.symbol ?? '—'} +${d.top_gainers[0]?.change_pct ?? 0}%  ▼ ${d.top_losers[0]?.symbol ?? '—'} ${d.top_losers[0]?.change_pct ?? 0}%`;
+
+    const rows = allGL.map(c => `
+      <tr>
+        <td><strong>${c.symbol}</strong><br><small style="color:var(--muted)">${c.name.split(' ').slice(0,2).join(' ')}</small></td>
+        <td>₹${c.close.toLocaleString('en-IN')}</td>
+        <td class="${c.change_pct >= 0 ? 'up' : 'dn'}">${c.change_pct >= 0 ? '+' : ''}${c.change_pct}%</td>
+        <td><span class="pill ${c.type === 'gainer' ? 'pill-bull' : 'pill-bear'}">${c.type}</span></td>
+      </tr>`).join('');
+
+    document.getElementById('gl-content').innerHTML = `
+      <table class="gl-table">
+        <thead><tr><th>Stock</th><th>Price</th><th>Change</th><th>Type</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+
+    // Volatility bars (reuse company list data)
+    await loadVolatilityBars();
+  } catch(e) { console.error('gl error', e); }
+}
+
+async function loadVolatilityBars() {
+  const symbols = allCompanies.slice(0, 6).map(c => c.symbol);
+  const results = [];
+  for (const sym of symbols) {
+    try {
+      const res = await fetch(`${BASE}/summary/${sym}`);
+      const d = await res.json();
+      results.push({ symbol: sym, score: d.avg_volatility_30d, level: d.volatility_level });
+    } catch(e) {}
+  }
+  const colors = { High: '#ff4d6d', Medium: '#f5a623', Low: '#00d4aa' };
+  const bars = results.map(r => `
+    <div class="vol-bar-wrap">
+      <div class="vol-label">
+        <span>${r.symbol}</span>
+        <span style="color:${colors[r.level] || 'var(--muted)'}">${r.level} (${r.score})</span>
+      </div>
+      <div class="vol-bar-bg">
+        <div class="vol-bar-fill" style="width:${r.score}%;background:${colors[r.level] || '#6c63ff'}"></div>
+      </div>
+    </div>`).join('');
+  document.getElementById('vol-content').innerHTML = bars || '<div class="loader">No data</div>';
+}
+
+// ── Compare ───────────────────────────────────────────────────────────────────
+async function runCompare() {
+  const s1   = document.getElementById('cmp1').value;
+  const s2   = document.getElementById('cmp2').value;
+  const days = document.getElementById('cmpDays').value;
+
+  if (s1 === s2) { alert('Please select two different stocks.'); return; }
+
+  document.getElementById('compare-panel').style.display = 'block';
+
+  try {
+    const res = await fetch(`${BASE}/compare?symbol1=${s1}&symbol2=${s2}&days=${days}`);
+    const d = await res.json();
+
+    document.getElementById('corr-badge').style.display = '';
+    document.getElementById('corr-badge').textContent =
+      `Correlation: ${d.correlation} (${d.correlation_label})`;
+    document.getElementById('compare-title').textContent =
+      `${s1} vs ${s2} — Normalised Performance (${days}d)`;
+
+    const labels = d.stock1.series.map(r => r.date);
+    const n1     = d.stock1.series.map(r => r.normalised);
+    const n2     = d.stock2.series.map(r => r.normalised);
+
+    const ctx = document.getElementById('compareChart').getContext('2d');
+    if (compareChartObj) compareChartObj.destroy();
+
+    compareChartObj = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: s1, data: n1, borderColor: '#6c63ff', pointRadius: 0, borderWidth: 2, fill: false, tension: 0.3 },
+          { label: s2, data: n2, borderColor: '#00d4aa', pointRadius: 0, borderWidth: 2, fill: false, tension: 0.3 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { labels: { color: '#8892a4', font: { size: 11 } } } },
+        scales: {
+          x: { ticks: { color: '#8892a4', maxTicksLimit: 8, font: { size: 10 } }, grid: { color: '#2e3148' } },
+          y: { ticks: { color: '#8892a4', font: { size: 10 }, callback: v => v.toFixed(1) }, grid: { color: '#2e3148' } },
+        },
+      },
+    });
+  } catch(e) { console.error('compare error', e); }
+}
+
+init();
+</script>
+</body>
+</html>
