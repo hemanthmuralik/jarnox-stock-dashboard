@@ -101,10 +101,10 @@ def _clean_and_enrich(raw: pd.DataFrame, symbol: str) -> pd.DataFrame:
     rolling_std = df["Daily_Return"].rolling(window=14, min_periods=1).std()
     max_std = rolling_std.max()
  # The "Beginner" Way
-if max_std > 0:
-    df["Volatility_Score"] = (rolling_std / max_std * 100).fillna(0).round(2)
-else:
-    df["Volatility_Score"] = 0.0
+    if max_std > 0:
+        df["Volatility_Score"] = (rolling_std / max_std * 100).fillna(0).round(2)
+    else:
+        df["Volatility_Score"] = 0.0
 
     # ── Custom metric: Momentum Signal ───────────────────────────────────────
     # MA7 > MA20 → bullish momentum (1), else bearish (-1), neutral (0)
