@@ -108,10 +108,16 @@ else:
 
     # ── Custom metric: Momentum Signal ───────────────────────────────────────
     # MA7 > MA20 → bullish momentum (1), else bearish (-1), neutral (0)
-    df["Momentum"] = np.where(
-        df["MA7"] > df["MA20"] * 1.005, 1,
-        np.where(df["MA7"] < df["MA20"] * 0.995, -1, 0)
-    )
+# Step 1: Set every single day to Neutral (0) by default
+df["Momentum"] = 0
+
+# Step 2: Overwrite with Bullish (1)
+# Translation: "If MA7 is breaking out, change it to 1. Otherwise, KEEP what is already there."
+df["Momentum"] = np.where(df["MA7"] > df["MA20"] * 1.005, 1, df["Momentum"])
+
+# Step 3: Overwrite with Bearish (-1)
+# Translation: "If MA7 is breaking down, change it to -1. Otherwise, KEEP what is already there."
+df["Momentum"] = np.where(df["MA7"] < df["MA20"] * 0.995, -1, df["Momentum"])
 
     df = df.round(4)
     return df
